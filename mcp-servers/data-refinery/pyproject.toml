@@ -7,7 +7,13 @@ authors = [
     { name = "VN-78", email = "vishwanath.s.god@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "boto3>=1.42.34",
+    "fastmcp>=2.14.3",
+    "mcp[cli]>=1.25.0",
+    "pandas>=3.0.0",
+    "pydantic>=2.12.5",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]
