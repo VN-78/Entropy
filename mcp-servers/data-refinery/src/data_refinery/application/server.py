@@ -11,13 +11,27 @@ mcp = FastMCP("data-refinery")
 
 client = PandasDatasetClient()
 
+# region Inspect-data tool
 @mcp.tool
 def inspect_dataset(file_uri: str) -> DatasetOverview:
-    """_summary_
-
-    Args:
-        file_uri (str): _description_
-
-    Returns:
-        DatasetOverview: _description_
     """
+    Reads a CSV file (local or S3) and returns a statistical summary.
+    
+    Args:
+        file_uri: The path to the file. 
+                  Use 's3://bucket/key.csv' for S3 
+                  or '/absolute/path/to/local.csv' for local files.
+    """
+
+    # load the data 
+    df = client.load_data(file_uri)
+
+    # analyze the data 
+    status = client.analyze(df)
+
+    return status 
+
+# region main
+if __name__ == "__main__":
+    mcp.run()
+
