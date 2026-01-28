@@ -19,3 +19,6 @@ members = [
     "mcp-servers/data-refinery",
     "mcp-servers/visualizer",
 ]
+
+[dependency-groups]
+dev = []

@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "boto3>=1.42.34",
+    "duckdb>=1.4.4",
     "fastmcp>=2.14.3",
     "mcp[cli]>=1.25.0",
     "pandas>=3.0.0",
