@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 # Domain Imports
 from data_refinery.domain.interfaces.repository import IDatasetRepository
 from data_refinery.domain.models.dataset import DatasetOverview, ColumnProfile
+from data_refinery.domain.models.cleaning import CleaningOptions
 
 # region load_data  
 class PandasDatasetClient(IDatasetRepository):
@@ -71,3 +72,57 @@ class PandasDatasetClient(IDatasetRepository):
             columns=columns,
             sample_data=sample
         )
+
+# region clean data 
+
+def clean_dataset(self, df: pd.DataFrame, options: CleaningOptions) -> pd.DataFrame:
+        """
+        Applies cleaning rules to the dataset.
+        Returns the cleaned DataFrame (does NOT save to file yet).
+        """
+        # 1. Normalize Headers (Global Rule)
+        if options.normalize_headers:
+            # - Strip whitespace
+            # - Lowercase
+            # - Replace spaces with underscores
+            # - Remove special characters (keep only alphanumeric and underscores)
+            df.columns = (df.columns
+                .str.strip()
+                .str.lower()
+                .str.replace(r'\s+', '_', regex=True)
+                .str.replace(r'[^\w]', '', regex=True))
+
+        # 2. Apply Column-Specific Strategies
+        for column, strategy in options.strategies.items():
+            if column not in df.columns:
+                continue  # Skip columns that don't exist (safety check)
+
+            # Strategy: DROP ROW
+            if strategy == "drop":
+                df = df.dropna(subset=[column])
+
+            # Strategy: FILL ZERO
+            elif strategy == "zero":
+                # Only apply to numeric columns to prevent errors
+                if pd.api.types.is_numeric_dtype(df[column]):
+                    df[column] = df[column].fillna(0)
+
+            # Strategy: FILL MEAN
+            elif strategy == "mean":
+                if pd.api.types.is_numeric_dtype(df[column]):
+                    mean_val = df[column].mean()
+                    df[column] = df[column].fillna(mean_val)
+
+            # Strategy: FILL MODE (Most Frequent)
+            elif strategy == "mode":
+                # mode() returns a Series (there can be ties), so we take the first one ([0])
+                if not df[column].mode().empty:
+                    mode_val = df[column].mode()[0]
+                    df[column] = df[column].fillna(mode_val)
+
+            # Strategy: FILL UNKNOWN
+            elif strategy == "unknown":
+                # Usually for text columns
+                df[column] = df[column].fillna("Unknown")
+
+        return df
