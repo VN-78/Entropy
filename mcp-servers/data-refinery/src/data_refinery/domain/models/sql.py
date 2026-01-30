@@ -11,7 +11,6 @@ class SQLQueryRequest(BaseModel):
     """
 
     file_uri : str = Field(..., description="The absolute path to the file (e.g., '/app/data.csv' or 's3://bucket/data.csv').")
-
     sql_query : str = Field(..., description="The raw SQL query to execute. CRITICAL: You must use DuckDB's direct file querying syntax (e.g., SELECT * FROM 'path/to/file.csv'). Do NOT use table names.")
 
 
@@ -25,5 +24,4 @@ class SQLQueryResponse(BaseDatasetInfo):
     """
 
     status : bool = Field(..., description="Status of the Query Execution Completed or Failed")
-
     result_uri : str = Field(..., description="The File Path of the resulting processed file")

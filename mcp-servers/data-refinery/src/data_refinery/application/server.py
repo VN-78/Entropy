@@ -1,9 +1,13 @@
 # region imports 
 from mcp.server.fastmcp import FastMCP
+import uuid
+from pathlib import Path
+from typing import Dict, List, Any
 
 # Domain And Infrastructure imports
 from data_refinery.domain.models.dataset import DatasetOverview
 from data_refinery.domain.models.sql import SQLQueryResponse
+from data_refinery.domain.models.cleaning import CleaningOptions, CleaningResponse
 from data_refinery.infrastructure.pandas_client import PandasDatasetClient
 from data_refinery.infrastructure.duckdb_client import DuckDBClient
 
@@ -85,6 +89,46 @@ def run_sql_query(file_uri: str, sql_query: str) -> SQLQueryResponse:
         # This is better than returning a partial "success=False" object.
         raise RuntimeError(f"Tool Execution Error: {str(e)}")
 
+
+# region clean_data_tool
+@mcp.tool()
+def clean_dataset(file_uri: str, options: CleaningOptions) -> CleaningResponse:
+    """
+    Cleans a dataset based on specific strategies for missing values and headers.
+    
+    Use this tool to fix "dirty" data (nulls, inconsistent headers) BEFORE 
+    running complex analysis.
+    """
+    try:
+        # 1. Load the data
+        df = client.load_data(file_uri)
+        
+        # 2. Apply the cleaning logic (The function you just wrote)
+        cleaned_df = client.clean_dataset(df, options)
+        
+        # 3. Save Artifact (Pass-by-Reference)
+        # We generate a unique ID so we don't overwrite previous work
+        file_id = uuid.uuid4().hex[:8]
+        output_filename = f"cleaned_{file_id}.parquet"
+        
+        # Ensure the directory exists (using your configured temp path)
+        output_path = Path("/tmp/data_refinery_artifacts") / output_filename
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save as Parquet (preserves the new clean schema)
+        cleaned_df.to_parquet(output_path)
+        
+        # 4. Return the DISTINCT CleaningResponse
+        return CleaningResponse(
+            status=True,
+            total_rows=len(cleaned_df),
+            total_columns=len(cleaned_df.columns),
+            sample_data=cleaned_df.head(5).to_dict(orient='records'),
+            result_uri=str(output_path)
+        )
+
+    except Exception as e:
+        raise RuntimeError(f"Cleaning Failed: {str(e)}")
 
 # region main
 if __name__ == "__main__":
