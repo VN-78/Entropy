@@ -40,7 +40,7 @@ class CleaningOptions(BaseModel):
             "- 'mode': Fill with the most frequent value (Good for Text/Category).\n"
             "- 'unknown': Fill with the string 'Unknown' (Text only)."
         ),
-        example={"age": "mean", "email": "drop", "city": "mode"}
+        json_schema_extra={"example":{"age": "mean", "email": "drop", "city": "mode"}}
     )
     
     
