@@ -126,7 +126,7 @@ def clean_dataset(file_uri: str, options: CleaningOptions) -> CleaningResponse:
         output_filename = f"cleaned_{file_id}.parquet"
         
         # Ensure the directory exists (using your configured temp path)
-        output_path = Path("/tmp/data_refinery_artifacts") / output_filename
+        output_path = Path("/home/vn-78/VN_78/Programming/Personal/Projects/Final-Year-Project/Entropy/test/temp") / output_filename
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Save as Parquet (preserves the new clean schema)
