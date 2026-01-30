@@ -51,12 +51,22 @@ def inspect_dataset(file_uri: str) -> DatasetOverview:
 @mcp.tool()
 def run_sql_query(file_uri: str, sql_query: str) -> SQLQueryResponse:
     """
-    Executes a SQL query on a dataset using DuckDB.
+    Executes a SQL query against a file and saves the result to a new file.
+
+    Use this tool to filter, sort, or aggregate data.
     
+    CRITICAL SYNTAX RULES:
+    1. The query MUST reference the 'file_uri' directly in the FROM clause.
+    2. DO NOT use generic table names like 'users' or 'data'.
+    3. The tool returns a 'result_uri' (path to the new file), NOT the full data.
+
     Args:
-        file_uri: The absolute path to the file.
-        sql_query: The SQL query string. MUST use the file path logic:
-                   SELECT * FROM 'path/to/file.csv' WHERE age > 30
+        file_uri: The absolute path to the source file (e.g., '/app/data.csv').
+        sql_query: The DuckDB SQL query string.
+        
+    Examples:
+        Correct: "SELECT name, age FROM '/app/data.csv' WHERE age > 25"
+        Incorrect: "SELECT name, age FROM users WHERE age > 25"
     """
     # 1. Input Integrity Check
     if file_uri not in sql_query:
