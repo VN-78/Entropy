@@ -1,0 +1,11 @@
+id,full_name,join_date,age,salary,department,email
+1,John Doe,2023-01-15,29,55000,Engineering,j.doe@example.com
+2,Jane Smith,01/16/2023,34,,Marketing,jane.smith@test.co
+3,Bob Wilson,2023-02-10,42,62000,Engineering,bob.wilson@example.com
+4,Alice Jones,2023-03-05,200,75000,Sales,
+5,,2023-04-12,31,68000,engineering,tom.brown@test.co
+6,Sarah Davis,2023-05-20,27,$58,000,Marketing,sarah.d@example.com
+3,Bob Wilson,2023-02-10,42,62000,Engineering,bob.wilson@example.com
+8,Mike  Miller,2023-06-15,,71000,Sales,m.miller@example.com
+9,Lisa Wong,NULL,29,65000,HR,lisa.wong@test.co
+10,David Lee,2023-08-01,33,80000,Slaes,david.lee@example.com
