@@ -75,7 +75,7 @@ class PandasDatasetClient(IDatasetRepository):
 
 # region clean data 
 
-def clean_dataset(self, df: pd.DataFrame, options: CleaningOptions) -> pd.DataFrame:
+    def clean_dataset(self, df: pd.DataFrame, options: CleaningOptions) -> pd.DataFrame:
         """
         Applies cleaning rules to the dataset.
         Returns the cleaned DataFrame (does NOT save to file yet).
