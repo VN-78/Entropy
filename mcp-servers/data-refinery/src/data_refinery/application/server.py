@@ -94,10 +94,24 @@ def run_sql_query(file_uri: str, sql_query: str) -> SQLQueryResponse:
 @mcp.tool()
 def clean_dataset(file_uri: str, options: CleaningOptions) -> CleaningResponse:
     """
-    Cleans a dataset based on specific strategies for missing values and headers.
-    
-    Use this tool to fix "dirty" data (nulls, inconsistent headers) BEFORE 
-    running complex analysis.
+    Apply data cleaning operations (imputation, normalization) to a dataset.
+
+    This tool loads a file, applies the specified 'CleaningOptions', and saves 
+    the result to a new Parquet file. It is the PRIMARY way to handle missing 
+    values (NaNs) and inconsistent headers.
+
+    Args:
+        file_uri: The absolute path to the input file (e.g., 's3://bucket/raw.csv').
+        options: A CleaningOptions object containing the specific rules.
+            The 'strategies' dictionary maps column names to actions:
+            - "drop": Remove rows.
+            - "mean": Fill with average (numeric only).
+            - "mode": Fill with most frequent (text/numeric).
+            - "zero": Fill with 0 (numeric only).
+            - "unknown": Fill with 'Unknown' (text only).
+
+    Returns:
+        CleaningResponse: Metadata about the cleaned file (row count, new path).
     """
     try:
         # 1. Load the data
