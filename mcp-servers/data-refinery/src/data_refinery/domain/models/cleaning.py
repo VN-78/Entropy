@@ -8,6 +8,21 @@ CleaningStrategy = Literal["drop", "zero", "mean", "mode", "unknown"]
 class CleaningOptions(BaseModel):
     """
     Configuration instructions for the data cleaning engine.
+
+    This model enforces strict validation on the cleaning strategies to ensure
+    downstream tools do not receive ambiguous instructions.
+
+    Attributes:
+        normalize_headers (bool): If True, renames columns to snake_case
+            (e.g., 'First Name' -> 'first_name'). Defaults to True.
+        strategies (Dict[str, CleaningStrategy]): A dictionary mapping column
+            names to their specific cleaning action.
+    
+    Example:
+        >>> options = CleaningOptions(
+        ...     normalize_headers=True,
+        ...     strategies={"age": "mean", "email": "drop"}
+        ... )
     """
     normalize_headers: bool = Field(
         True, 
