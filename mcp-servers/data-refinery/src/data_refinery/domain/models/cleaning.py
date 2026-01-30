@@ -6,6 +6,8 @@ from data_refinery.domain.models.dataset import BaseDatasetInfo
 # This helps IDEs and future developers know what strings are allowed
 CleaningStrategy = Literal["drop", "zero", "mean", "mode", "unknown"]
 
+# TODO also add an Date_field Normalizer function 
+
 class CleaningOptions(BaseModel):
     """
     Configuration instructions for the data cleaning engine.
