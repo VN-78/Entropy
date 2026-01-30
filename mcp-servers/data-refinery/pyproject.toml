@@ -13,6 +13,7 @@ dependencies = [
     "fastmcp>=2.14.3",
     "mcp[cli]>=1.25.0",
     "pandas>=3.0.0",
+    "pyarrow>=23.0.0",
     "pydantic>=2.12.5",
 ]
 

@@ -125,4 +125,4 @@ class PandasDatasetClient(IDatasetRepository):
                 # Usually for text columns
                 df[column] = df[column].fillna("Unknown")
 
-        return df
+        return df  # TODO also return the current quality of the data just like in the inspect dataset tool  
