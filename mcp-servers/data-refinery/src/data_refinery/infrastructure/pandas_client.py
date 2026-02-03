@@ -48,21 +48,60 @@ class PandasDatasetClient(IDatasetRepository):
         columns = []
         
         for col_name in df.columns:
+            series = df[col_name]
+            
             # 1. Map Pandas Dtypes to simple strings
-            dtype = str(df[col_name].dtype)
+            dtype = str(series.dtype)
             
             # 2. Calculate Missing %
-            missing_count = df[col_name].isnull().sum()
+            missing_count = series.isnull().sum()
             total_count = len(df)
             missing_pct = (missing_count / total_count) * 100 if total_count > 0 else 0.0
+
+            # 3. Calculate Stats for Numeric Columns
+            mean_val = None
+            std_val = None
+            min_val = None
+            max_val = None
+            outlier_count = None
+
+            if pd.api.types.is_numeric_dtype(series):
+                # Calculate basic stats (convert to native python float for JSON serialization)
+                try:
+                    mean_val = float(series.mean()) if not pd.isna(series.mean()) else None
+                    std_val = float(series.std()) if not pd.isna(series.std()) else None
+                    min_val = float(series.min()) if not pd.isna(series.min()) else None
+                    max_val = float(series.max()) if not pd.isna(series.max()) else None
+                    
+                    # Calculate Outliers (IQR Method)
+                    # We drop NAs for quantile calculation to avoid issues
+                    valid_data = series.dropna()
+                    if not valid_data.empty:
+                        Q1 = valid_data.quantile(0.25)
+                        Q3 = valid_data.quantile(0.75)
+                        IQR = Q3 - Q1
+                        lower_bound = Q1 - 1.5 * IQR
+                        upper_bound = Q3 + 1.5 * IQR
+                        
+                        # Count values outside bounds
+                        outliers = valid_data[(valid_data < lower_bound) | (valid_data > upper_bound)]
+                        outlier_count = int(len(outliers))
+                except Exception:
+                    # Fallback for edge cases (e.g. all NaNs or mixed types that tricked the check)
+                    pass
 
             columns.append(ColumnProfile(
                 name=col_name,
                 data_type=dtype,
-                missing_percentage=round(missing_pct, 2)
+                missing_percentage=round(missing_pct, 2),
+                mean=mean_val,
+                std=std_val,
+                min=min_val,
+                max=max_val,
+                outlier_count=outlier_count
             ))
 
-        # 3. Create Sample Rows (handle NaN values for JSON safety)
+        # 4. Create Sample Rows (handle NaN values for JSON safety)
         # replace(float('nan'), None) ensures JSON compatibility
         sample = df.head(5).replace({float('nan'): None}).to_dict(orient='records')
 

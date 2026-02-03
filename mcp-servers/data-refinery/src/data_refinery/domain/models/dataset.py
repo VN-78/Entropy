@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class BaseDatasetInfo(BaseModel):
@@ -24,10 +24,23 @@ class ColumnProfile(BaseModel):
         name: The header name of the column.
         data_type: The simplified Python type (e.g., 'int', 'float', 'string').
         missing_percentage: The ratio of null values to total rows (0-100).
+        mean: The average value (numeric columns only).
+        std: The standard deviation (numeric columns only).
+        min: The minimum value (numeric columns only).
+        max: The maximum value (numeric columns only).
+        outlier_count: Number of potential outliers (1.5 * IQR rule).
     """
     name: str = Field(..., description="The Name of the Column")
     data_type: str = Field(..., description="The simplified data type (e.g, 'int', 'string')")
     missing_percentage: float = Field(..., description="Percentage of Missing values (0.0 to 100.0)")
+    
+    # New Statistical Fields (Optional, as they don't apply to text)
+    mean: Optional[float] = Field(None, description="Average value for numeric columns")
+    std:  Optional[float] = Field(None, description="Standard deviation for numeric columns")
+    min:  Optional[float] = Field(None, description="Minimum value")
+    max:  Optional[float] = Field(None, description="Maximum value")
+    outlier_count: Optional[int] = Field(None, description="Count of values outside 1.5 * IQR range")
+
 
 class DatasetOverview(BaseDatasetInfo):
     """

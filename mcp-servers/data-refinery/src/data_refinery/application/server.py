@@ -22,7 +22,7 @@ mcp = FastMCP(
 client = PandasDatasetClient()
 db_client = DuckDBClient()
 
-# region Inspect-data tool
+# region Inspect-data tool  
 @mcp.tool()
 def inspect_dataset(file_uri: str) -> DatasetOverview:
     """
@@ -35,6 +35,7 @@ def inspect_dataset(file_uri: str) -> DatasetOverview:
     - Row/Column counts
     - Missing value percentages (to identify dirty data)
     - Data types for every column
+    - Basic statistics for numeric columns (mean, std, min, max, outlier counts)
     - A sample of 5 rows to understand context
     
     Args:
