@@ -2,7 +2,7 @@
 import pandas as pd
 import io
 import boto3
-from typing import Any
+from typing import Any, Tuple
 from urllib.parse import urlparse
 
 # Domain Imports
@@ -114,10 +114,10 @@ class PandasDatasetClient(IDatasetRepository):
 
 # region clean data 
 
-    def clean_dataset(self, df: pd.DataFrame, options: CleaningOptions) -> pd.DataFrame:
+    def clean_dataset(self, df: pd.DataFrame, options: CleaningOptions) -> Tuple[pd.DataFrame, DatasetOverview]:
         """
         Applies cleaning rules to the dataset.
-        Returns the cleaned DataFrame (does NOT save to file yet).
+        Returns the cleaned DataFrame and its new quality overview.
         """
         # 1. Normalize Headers (Global Rule)
         if options.normalize_headers:
@@ -131,7 +131,25 @@ class PandasDatasetClient(IDatasetRepository):
                 .str.replace(r'\s+', '_', regex=True)
                 .str.replace(r'[^\w]', '', regex=True))
 
-        # 2. Apply Column-Specific Strategies
+        # 2. Date Normalization
+        if options.date_columns:
+            for date_cfg in options.date_columns:
+                col = date_cfg.column_name
+                if col in df.columns:
+                    try:
+                        # Convert to datetime objects first (handles various input formats)
+                        # errors='coerce' turns unparseable strings into NaT
+                        df[col] = pd.to_datetime(df[col], errors='coerce')
+                        
+                        # Apply target string format
+                        # Note: This converts the column to Object/String type
+                        if date_cfg.output_format:
+                            df[col] = df[col].dt.strftime(date_cfg.output_format)
+                    except Exception:
+                        # If a column is completely incompatible, we skip it to prevent crashing
+                        pass
+
+        # 3. Apply Column-Specific Strategies
         for column, strategy in options.strategies.items():
             if column not in df.columns:
                 continue  # Skip columns that don't exist (safety check)
@@ -164,4 +182,7 @@ class PandasDatasetClient(IDatasetRepository):
                 # Usually for text columns
                 df[column] = df[column].fillna("Unknown")
 
-        return df  # TODO also return the current quality of the data just like in the inspect dataset tool  
+        # 4. Generate Quality Report for the Cleaned Data
+        overview = self.analyze(df)
+
+        return df, overview

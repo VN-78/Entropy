@@ -11,7 +11,6 @@ from data_refinery.domain.models.cleaning import CleaningOptions, CleaningRespon
 from data_refinery.infrastructure.pandas_client import PandasDatasetClient
 from data_refinery.infrastructure.duckdb_client import DuckDBClient
 
-
 # region initialize mcp server
 mcp = FastMCP(
     name = "data-refinery",
@@ -110,16 +109,20 @@ def clean_dataset(file_uri: str, options: CleaningOptions) -> CleaningResponse:
             - "mode": Fill with most frequent (text/numeric).
             - "zero": Fill with 0 (numeric only).
             - "unknown": Fill with 'Unknown' (text only).
+            
+            The 'date_columns' list allows standardizing date formats:
+            - "column_name": Name of the date column.
+            - "output_format": Target format (e.g., "%Y-%m-%d").
 
     Returns:
-        CleaningResponse: Metadata about the cleaned file (row count, new path).
+        CleaningResponse: Metadata about the cleaned file (row count, new path, and column stats).
     """
     try:
         # 1. Load the data
         df = client.load_data(file_uri)
         
         # 2. Apply the cleaning logic (The function you just wrote)
-        cleaned_df = client.clean_dataset(df, options)
+        cleaned_df, quality_report = client.clean_dataset(df, options)
         
         # 3. Save Artifact (Pass-by-Reference)
         # We generate a unique ID so we don't overwrite previous work
@@ -136,10 +139,8 @@ def clean_dataset(file_uri: str, options: CleaningOptions) -> CleaningResponse:
         # 4. Return the DISTINCT CleaningResponse
         return CleaningResponse(
             status=True,
-            total_rows=len(cleaned_df),
-            total_columns=len(cleaned_df.columns),
-            sample_data=cleaned_df.head(5).to_dict(orient='records'),
-            result_uri=str(output_path)
+            result_uri=str(output_path),
+            **quality_report.model_dump()
         )
 
     except Exception as e:

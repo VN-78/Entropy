@@ -1,12 +1,21 @@
 from pydantic import BaseModel, Field
 from typing import Dict, Literal, Optional
-from data_refinery.domain.models.dataset import BaseDatasetInfo
+from data_refinery.domain.models.dataset import BaseDatasetInfo, DatasetOverview
 
 # We define the valid strategies as a Type for clarity
 # This helps IDEs and future developers know what strings are allowed
 CleaningStrategy = Literal["drop", "zero", "mean", "mode", "unknown"]
 
-# TODO also add an Date_field Normalizer function 
+class DateColumnConfig(BaseModel):
+    """
+    Configuration for standardizing date columns.
+    
+    Attributes:
+        column_name: The name of the column to parse.
+        output_format: The desired output format (default: YYYY-MM-DD).
+    """
+    column_name: str = Field(..., description="The name of the column to parse.")
+    output_format: str = Field("%Y-%m-%d", description="The desired output format (default: YYYY-MM-DD).")
 
 class CleaningOptions(BaseModel):
     """
@@ -20,11 +29,14 @@ class CleaningOptions(BaseModel):
             (e.g., 'First Name' -> 'first_name'). Defaults to True.
         strategies (Dict[str, CleaningStrategy]): A dictionary mapping column
             names to their specific cleaning action.
+        date_columns (List[DateColumnConfig]): A list of columns to convert to 
+            standard date format.
     
     Example:
         >>> options = CleaningOptions(
         ...     normalize_headers=True,
-        ...     strategies={"age": "mean", "email": "drop"}
+        ...     strategies={"age": "mean", "email": "drop"},
+        ...     date_columns=[{"column_name": "created_at", "output_format": "%Y-%m-%d"}]
         ... )
     """
     normalize_headers: bool = Field(
@@ -46,14 +58,19 @@ class CleaningOptions(BaseModel):
         json_schema_extra={"example":{"age": "mean", "email": "drop", "city": "mode"}}
     )
     
-class CleaningResponse(BaseDatasetInfo):
+    date_columns: Optional[list[DateColumnConfig]] = Field(
+        None,
+        description="List of columns to convert to standard date format."
+    )
+    
+class CleaningResponse(DatasetOverview):
     """
     Standardized output for a data cleaning operation.
 
     This model encapsulates the result of applying cleaning strategies (imputation,
-    normalization, etc.) to a dataset. It inherits from BaseDatasetInfo to provides 
-    immediate feedback on the dataset's new shape (row count, sample data) while 
-    pointing the Agent to the persisted artifact.
+    normalization, etc.) to a dataset. It inherits from DatasetOverview to provides 
+    immediate feedback on the dataset's new shape (row count, sample data, and column stats) 
+    while pointing the Agent to the persisted artifact.
 
     Attributes:
         status: Indicates if the cleaning process completed successfully.
