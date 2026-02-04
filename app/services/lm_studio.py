@@ -11,7 +11,7 @@ class LMStudioClient(LLMClient):
         async with httpx.AsyncClient(base_url=self.base_url, timeout=60.0) as client:
             response = await client.post(
                 "chat/completions",
-                json=request.model_dump(exclude_none=True)
+                json=request.model_dump(exclude_none=True, exclude={"template_id", "template_variables"})
             )
             response.raise_for_status()
             return ChatCompletionResponse(**response.json())
