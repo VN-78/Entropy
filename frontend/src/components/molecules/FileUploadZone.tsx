@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, File, X, CheckCircle } from 'lucide-react';
+import type { DragEvent, ChangeEvent } from 'react';
+import { Upload, File as FileIcon, X as XIcon, CheckCircle } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { uploadFile } from '../../services/api';
 import type { FileUploadResponse } from '../../types';
@@ -22,20 +23,27 @@ export function FileUploadZone({ onUploadSuccess, className }: FileUploadZonePro
     setError(null);
   };
 
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      handleFileSelect(selectedFile);
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
     try {
       const result = await uploadFile(file);
       onUploadSuccess(result);
-    } catch (err: any) {
-      setError(err.message || 'Upload failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
@@ -44,7 +52,7 @@ export function FileUploadZone({ onUploadSuccess, className }: FileUploadZonePro
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files[0];
@@ -67,7 +75,7 @@ export function FileUploadZone({ onUploadSuccess, className }: FileUploadZonePro
           <input
             type="file"
             ref={fileInputRef}
-            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+            onChange={handleFileChange}
             className="hidden"
             accept=".csv,.parquet,.json"
           />
@@ -79,7 +87,7 @@ export function FileUploadZone({ onUploadSuccess, className }: FileUploadZonePro
         <div className="border border-gray-200 rounded-xl p-4 bg-white flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="bg-primary-50 p-3 rounded-lg">
-              <File className="h-6 w-6 text-primary-600" />
+              <FileIcon className="h-6 w-6 text-primary-600" />
             </div>
             <div>
               <p className="font-medium text-gray-900">{file.name}</p>
@@ -91,7 +99,7 @@ export function FileUploadZone({ onUploadSuccess, className }: FileUploadZonePro
               <>
                 <Button onClick={handleUpload}>Analyze Now</Button>
                 <Button variant="ghost" size="sm" onClick={() => setFile(null)}>
-                  <X className="h-4 w-4" />
+                  <XIcon className="h-4 w-4" />
                 </Button>
               </>
             ) : (
@@ -107,3 +115,4 @@ export function FileUploadZone({ onUploadSuccess, className }: FileUploadZonePro
     </div>
   );
 }
+

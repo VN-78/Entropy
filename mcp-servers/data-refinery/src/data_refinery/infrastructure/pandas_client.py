@@ -32,13 +32,15 @@ class PandasDatasetClient(IDatasetRepository):
 
     def load_data(self, file_uri) -> pd.DataFrame:
         """
-        Smart loader: checks if URI is S3 or Local.
+        Smart loader: checks if URI is S3 or Local, and handles CSV or Parquet.
         """
-        if file_uri.startswith("s3://"):
-            storage_opts = self._get_storage_options()
-            return pd.read_csv(file_uri, storage_options=storage_opts)
+        storage_opts = self._get_storage_options() if file_uri.startswith("s3://") else None
+        
+        if file_uri.endswith(".parquet"):
+            return pd.read_parquet(file_uri, storage_options=storage_opts)
         else:
-            return pd.read_csv(file_uri)
+            # Default to CSV
+            return pd.read_csv(file_uri, storage_options=storage_opts)
 
     def save_dataframe(self, df: pd.DataFrame, file_uri: str):
         """

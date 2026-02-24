@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '../atoms/Button';
 
@@ -11,7 +12,7 @@ interface ChatInputProps {
 export function ChatInput({ onSend, disabled, placeholder = "Ask me to analyze something..." }: ChatInputProps) {
   const [input, setInput] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (input.trim() && !disabled) {
       onSend(input);

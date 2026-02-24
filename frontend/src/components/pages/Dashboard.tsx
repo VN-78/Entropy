@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Brain, Database, FileSpreadsheet, Sparkles, Activity } from 'lucide-react';
 import { FileUploadZone } from '../molecules/FileUploadZone';
 import { ChatInput } from '../molecules/ChatInput';

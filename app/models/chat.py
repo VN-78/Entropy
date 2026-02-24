@@ -6,6 +6,7 @@ class Function(BaseModel):
     name: str
     description: Optional[str] = None
     parameters: Optional[Dict[str, Any]] = None
+    arguments: Optional[str] = None # Added for tool calls
 
 class Tool(BaseModel):
     type: Literal["function"] = "function"

@@ -27,14 +27,14 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
     
     # 1. Fetch available tools from MCP server
     try:
-        yield f"data: {json.dumps({'status': 'info', 'message': 'Connecting to Data Refinery...'})}"
+        yield f"data: {json.dumps({'status': 'info', 'message': 'Connecting to Data Refinery...'})}\n\n"
 
         tools = await data_refinery_mcp.list_tools()
-        yield f"data: {json.dumps({'status': 'info', 'message': f'Discovered {len(tools)} tools.'})}"
+        yield f"data: {json.dumps({'status': 'info', 'message': f'Discovered {len(tools)} tools.'})}\n\n"
 
 
     except Exception as e:
-        yield f"data: {json.dumps({'status': 'error', 'message': f'Failed to connect to tools: {e}'})}"
+        yield f"data: {json.dumps({'status': 'error', 'message': f'Failed to connect to tools: {e}'})}\n\n"
 
 
         return
@@ -45,7 +45,7 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
 
     max_iterations = 5
     for i in range(max_iterations):
-        yield f"data: {json.dumps({'status': 'thinking', 'message': 'Analyzing prompt and selecting tool...'})}"
+        yield f"data: {json.dumps({'status': 'thinking', 'message': 'Analyzing prompt and selecting tool...'})}\n\n"
 
 
         
@@ -58,7 +58,7 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
             # Send to LM Studio
             response = await llm_client.chat_completion(chat_req)
         except Exception as e:
-            yield f"data: {json.dumps({'status': 'error', 'message': f'LLM Error: {e}'})}"
+            yield f"data: {json.dumps({'status': 'error', 'message': f'LLM Error: {e}'})}\n\n"
 
 
             return
@@ -75,7 +75,7 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
                 func_name = tool_call.function.name
                 func_args = json.loads(tool_call.function.arguments)
                 
-                yield f"data: {json.dumps({'status': 'executing', 'message': f'Running tool {func_name}...', 'tool': func_name, 'args': func_args})}"
+                yield f"data: {json.dumps({'status': 'executing', 'message': f'Running tool {func_name}...', 'tool': func_name, 'args': func_args})}\n\n"
 
 
                 
@@ -83,7 +83,7 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
                     # Execute tool via MCP
                     tool_result = await data_refinery_mcp.call_tool(func_name, func_args)
                     
-                    yield f"data: {json.dumps({'status': 'success', 'message': f'Tool {func_name} completed.', 'result': tool_result})}"
+                    yield f"data: {json.dumps({'status': 'success', 'message': f'Tool {func_name} completed.', 'result': tool_result})}\n\n"
 
                     
                     # Append tool result to history
@@ -94,7 +94,7 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
                     })
                 except Exception as e:
                     error_msg = f"Error running {func_name}: {e}"
-                    yield f"data: {json.dumps({'status': 'error', 'message': error_msg})}"
+                    yield f"data: {json.dumps({'status': 'error', 'message': error_msg})}\n\n"
 
 
                     messages.append({
@@ -104,13 +104,13 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
                     })
         else:
             # Agent replied with standard text (Final answer)
-            yield f"data: {json.dumps({'status': 'complete', 'message': message.content})}"
+            yield f"data: {json.dumps({'status': 'complete', 'message': message.content})}\n\n"
 
 
             break
             
     else:
-         yield f"data: {json.dumps({'status': 'error', 'message': 'Reached maximum reasoning iterations.'})}"
+         yield f"data: {json.dumps({'status': 'error', 'message': 'Reached maximum reasoning iterations.'})}\n\n"
 
 
 

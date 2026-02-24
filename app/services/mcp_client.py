@@ -1,18 +1,19 @@
 import asyncio
 import logging
+import os
 from typing import Any, Dict, List, Optional
 from mcp.client.session import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 import json
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 class MCPClientManager:
     def __init__(self, command: str, args: List[str]):
-        self.server_parameters = StdioServerParameters(
-            command=command,
-            args=args
-        )
+        # We'll create server_parameters during connect to ensure we have the latest environment/settings
+        self.command = command
+        self.args = args
         self.session: Optional[ClientSession] = None
         self._exit_stack = None
         self._stdio_context = None
@@ -25,9 +26,23 @@ class MCPClientManager:
         from contextlib import AsyncExitStack
         self._exit_stack = AsyncExitStack()
         
+        # Pass S3 credentials to the MCP server subprocess
+        env = os.environ.copy()
+        env.update({
+            "S3_ENDPOINT_URL": settings.S3_ENDPOINT_URL,
+            "S3_ACCESS_KEY": settings.S3_ACCESS_KEY,
+            "S3_SECRET_KEY": settings.S3_SECRET_KEY,
+        })
+
+        server_parameters = StdioServerParameters(
+            command=self.command,
+            args=self.args,
+            env=env
+        )
+
         try:
             # Setup stdio client
-            self._stdio_context = await self._exit_stack.enter_async_context(stdio_client(self.server_parameters))
+            self._stdio_context = await self._exit_stack.enter_async_context(stdio_client(server_parameters))
             read_stream, write_stream = self._stdio_context
             
             # Start session
@@ -84,8 +99,7 @@ class MCPClientManager:
             else:
                 outputs.append(str(content))
                 
-        return "
-".join(outputs)
+        return "\n".join(outputs)
 
 # The command to run the data-refinery server
 # We use uv run to execute the server script inside the correct workspace context
