@@ -2,82 +2,50 @@
 
 ## Project Overview
 
-**Entropy** is a Python-based monorepo project managed with `uv`. It appears to be a system designed for data processing and analysis, utilizing the Model Context Protocol (MCP) to expose tools for AI agents or other clients.
+**Entropy** is an AI-powered data analysis and refinery platform. It enables users to interact with datasets (CSV, Parquet) using natural language, leveraging Large Language Models (LLMs) and the Model Context Protocol (MCP) to perform complex data operations like inspection, cleaning, and SQL-based transformations.
 
-The project consists of:
-- **Core Application**: A FastAPI-based backend (`app/`).
-- **MCP Servers**: Specialized servers for distinct tasks:
-    - `data-refinery`: Handles data inspection, cleaning, and SQL querying via DuckDB and Pandas.
-    - `visualizer`: (Likely) Handles data visualization tasks.
+The project is structured as a monorepo managed with `uv`.
+
+## Core Components
+
+- **Main Backend (`app/`)**: A FastAPI application that serves as the orchestration layer.
+    - **LLM Integration**: Interfaces with local LLM providers (e.g., LM Studio) to handle natural language processing.
+    - **Storage**: Manages file uploads and artifacts using S3-compatible storage (MinIO/AWS S3).
+    - **API**: Provides endpoints for chat completions and file management.
+- **Data Refinery MCP Server (`mcp-servers/data-refinery`)**: A specialized service that exposes data processing tools via MCP.
+    - **DuckDB**: For high-performance SQL querying directly on files.
+    - **Pandas**: For data inspection and complex cleaning operations.
+- **Visualizer MCP Server (`mcp-servers/visualizer`)**: (Placeholder) Planned for automated data visualization.
 
 ## Key Technologies
 
 - **Language**: Python 3.14+
-- **Package Manager**: `uv` (supports workspaces)
+- **Package Manager**: `uv` (workspace mode)
 - **Web Framework**: FastAPI
-- **MCP Framework**: `fastmcp`
-- **Data Processing**: Pandas, DuckDB, PyArrow
-- **Database**: SQLAlchemy, AsyncPG, Alembic (migrations)
-- **Testing**: Pytest
+- **LLM Connectivity**: LM Studio (OpenAI-compatible API)
+- **Data Stack**: Pandas, DuckDB, PyArrow
+- **Storage**: Boto3 (S3/MinIO)
+- **Protocol**: Model Context Protocol (MCP) via `fastmcp`
 
-## Architecture
+## Architecture & Design Patterns
 
-The project follows a modular architecture:
+- **Clean Architecture**: Applied particularly in the `data-refinery` server, separating domain logic from infrastructure (DuckDB/Pandas implementations).
+- **Pass-by-Reference Tooling**: MCP tools operate on file URIs and return new file URIs for intermediate results, rather than passing large dataframes in memory.
+- **Prompt Templating**: Managed centrally in `app/core/templates.py` to ensure consistent LLM behavior.
 
-- **Monorepo Structure**: Defined in `pyproject.toml` using `[tool.uv.workspace]`.
-- **Clean Architecture (Data Refinery)**:
-    - `domain/`: Contains business logic, models (Pydantic), and interfaces.
-    - `infrastructure/`: Implementations of interfaces (e.g., `PandasDatasetClient`, `DuckDBClient`).
-    - `application/`: Application entry points and server configuration.
+## Workflow
 
-## Building and Running
+1.  **Data Ingestion**: Datasets are uploaded to S3 storage.
+2.  **Tool Discovery**: The system identifies available MCP tools (`inspect_dataset`, `run_sql_query`, `clean_dataset`).
+3.  **LLM Orchestration**: The user provides a natural language query. The LLM selects and chains appropriate tools to fulfill the request.
+4.  **Artifact Generation**: Operations like cleaning or querying produce new files in storage, which are then used for subsequent steps.
 
-### Prerequisites
+## Development Status
 
-- **Python 3.14+**
-- **uv**: Ensure `uv` is installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
-
-### Setup
-
-1.  **Install Dependencies**:
-    ```bash
-    uv sync
-    ```
-
-### Running Components
-
-**Data Refinery MCP Server:**
-To run the data refinery server (std transport):
-```bash
-uv run -p mcp-servers/data-refinery/src/data_refinery/application/server.py
-# Or if installed as a module:
-# uv run python -m data_refinery.application.server
-```
-
-**Main Application:**
-(Assumed based on `main.py` and `app/` structure)
-```bash
-uv run main.py
-# OR
-uv run uvicorn app.main:app --reload
-```
-
-## Development Conventions
-
-- **Type Safety**: The codebase uses strict type hinting (`py.typed`).
-- **Dependency Management**: All dependencies are managed via `uv` and locked in `uv.lock`.
-- **MCP Tools**: Tools exposed by MCP servers MUST have detailed docstrings explaining arguments, return types, and critical usage constraints (e.g., `clean_dataset`, `run_sql_query`).
-- **Testing**: Tests are located in `test/` (global) or `mcp-servers/*/test/` (component-specific). Run with `uv run pytest`.
-
-## Directory Structure
-
-```text
-/
-├── app/                  # Main FastAPI application
-├── mcp-servers/          # Independent MCP server modules
-│   ├── data-refinery/    # Data cleaning and SQL server
-│   └── visualizer/       # Visualization server
-├── test/                 # Integration tests and test data
-├── pyproject.toml        # Root workspace configuration
-└── uv.lock               # Pinned dependencies
-```
+- [x] FastAPI Backend Skeleton
+- [x] S3 Storage Integration
+- [x] LM Studio Integration
+- [x] Data Refinery MCP (Inspect, SQL, Clean)
+- [ ] Visualizer MCP Implementation
+- [ ] Frontend UI (React/Vite)
+- [ ] Agentic Tool Selection Loop

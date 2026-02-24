@@ -129,17 +129,30 @@ def clean_dataset(file_uri: str, options: CleaningOptions) -> CleaningResponse:
         file_id = uuid.uuid4().hex[:8]
         output_filename = f"cleaned_{file_id}.parquet"
         
-        # Ensure the directory exists (using your configured temp path)
-        output_path = Path("/home/vn-78/VN_78/Programming/Personal/Projects/Final-Year-Project/Entropy/test/temp") / output_filename
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if file_uri.startswith("s3://"):
+             # Keep in the same "folder" as input
+            parent = str(Path(file_uri).parent)
+            # Fix Path issue with s3:// (Path('s3://...') might behave oddly on some OS)
+            # Simpler string manipulation for S3 to be safe
+            if parent == ".": # happens if file_uri is just 's3://bucket'
+                 parent = file_uri
+            
+            # Reconstruct URI properly
+            # If file_uri is s3://bucket/folder/file.csv -> parent is usually s3:/bucket/folder (Path strips slash)
+            # Safest is to just replace filename
+            base_uri = file_uri.rsplit('/', 1)[0]
+            output_path = f"{base_uri}/{output_filename}"
+        else:
+            # Ensure the directory exists (using your configured temp path)
+            output_path = str(Path("/home/vn-78/VN_78/Programming/Personal/Projects/Final-Year-Project/Entropy/test/temp") / output_filename)
         
-        # Save as Parquet (preserves the new clean schema)
-        cleaned_df.to_parquet(output_path)
+        # Save using the smart client
+        client.save_dataframe(cleaned_df, output_path)
         
         # 4. Return the DISTINCT CleaningResponse
         return CleaningResponse(
             status=True,
-            result_uri=str(output_path),
+            result_uri=output_path,
             **quality_report.model_dump()
         )
 

@@ -1,6 +1,7 @@
 # region imports 
 import duckdb
 import uuid
+import os
 from pathlib import Path
 from typing import Dict, List, Any
 
@@ -32,6 +33,26 @@ class DuckDBClient:
         except PermissionError:
             raise RuntimeError(f"Critical: Cannot write to artifact directory: {artifact_dir}")
 
+    def _configure_s3(self, conn: duckdb.DuckDBPyConnection):
+        """Configures the DuckDB connection for S3 access if credentials exist."""
+        endpoint = os.environ.get("S3_ENDPOINT_URL")
+        key = os.environ.get("S3_ACCESS_KEY")
+        secret = os.environ.get("S3_SECRET_KEY")
+        
+        if endpoint and key and secret:
+            try:
+                # Install/Load httpfs extension for S3 support
+                conn.execute("INSTALL httpfs; LOAD httpfs;")
+                
+                # Configure S3/MinIO
+                conn.execute(f"SET s3_endpoint='{endpoint.replace('http://', '').replace('https://', '')}';")
+                conn.execute(f"SET s3_access_key_id='{key}';")
+                conn.execute(f"SET s3_secret_access_key='{secret}';")
+                conn.execute("SET s3_url_style='path';")
+                conn.execute("SET s3_use_ssl=false;") # Assumes local MinIO without SSL
+            except Exception as e:
+                # Log or ignore if extension fails? Better to warn.
+                print(f"Warning: Failed to configure S3 for DuckDB: {e}")
 
     def execute_and_write(self, sql_query: str) -> SQLQueryResponse:
         """
@@ -61,6 +82,9 @@ class DuckDBClient:
         # We create a new connection per request to ensure isolation.
         # DuckDB handles this very cheaply.
         conn = duckdb.connect(database=':memory:')
+        
+        # Configure S3 if needed
+        self._configure_s3(conn)
 
         try:
             # 2. Lazy Execution

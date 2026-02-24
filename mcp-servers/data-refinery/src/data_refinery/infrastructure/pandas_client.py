@@ -1,8 +1,8 @@
 # region imports
 import pandas as pd
 import io
-import boto3
-from typing import Any, Tuple
+import os
+from typing import Any, Tuple, Optional
 from urllib.parse import urlparse
 
 # Domain Imports
@@ -15,28 +15,42 @@ class PandasDatasetClient(IDatasetRepository):
     """
     Implementation to load Data from both local files and S3 URLs using pandas as the engine
     """
+    
+    def _get_storage_options(self) -> Optional[dict]:
+        """Returns storage options for s3fs/boto3 if S3 config is present in env."""
+        endpoint = os.environ.get("S3_ENDPOINT_URL")
+        key = os.environ.get("S3_ACCESS_KEY")
+        secret = os.environ.get("S3_SECRET_KEY")
+        
+        if endpoint and key and secret:
+            return {
+                "client_kwargs": {"endpoint_url": endpoint},
+                "key": key,
+                "secret": secret
+            }
+        return None
+
     def load_data(self, file_uri) -> pd.DataFrame:
         """
         Smart loader: checks if URI is S3 or Local.
         """
         if file_uri.startswith("s3://"):
-            return self._load_from_s3(file_uri)
+            storage_opts = self._get_storage_options()
+            return pd.read_csv(file_uri, storage_options=storage_opts)
         else:
             return pd.read_csv(file_uri)
-        
-    def _load_from_s3(self, s3_uri) -> pd.DataFrame:
-        """Private helper to handle AWS S3 streaming."""
-        # Parse s3://bucket/key
-        parsed = urlparse(s3_uri)
-        bucket = parsed.netloc
-        key = parsed.path.lstrip('/')
-        
-        # Initialize Boto3 client (assumes you have ~/.aws/credentials set up)
-        s3 = boto3.client('s3')
-        obj = s3.get_object(Bucket=bucket, Key=key)
-        
-        # Read the stream directly into Pandas
-        return pd.read_csv(io.BytesIO(obj['Body'].read()))
+
+    def save_dataframe(self, df: pd.DataFrame, file_uri: str):
+        """
+        Smart saver: saves to local or S3 based on URI.
+        """
+        if file_uri.startswith("s3://"):
+            storage_opts = self._get_storage_options()
+            df.to_parquet(file_uri, storage_options=storage_opts)
+        else:
+            # Ensure parent dir exists for local files
+            os.makedirs(os.path.dirname(file_uri), exist_ok=True)
+            df.to_parquet(file_uri)
 
 # region analyze data 
 
