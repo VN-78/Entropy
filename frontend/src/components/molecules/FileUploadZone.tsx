@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import type { DragEvent, ChangeEvent } from 'react';
 import { Upload, File as FileIcon, X as XIcon, CheckCircle } from 'lucide-react';
 import { Button } from '../atoms/Button';

@@ -1,26 +1,55 @@
-import React, { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Brain, Database, FileSpreadsheet, Sparkles, Activity } from 'lucide-react';
 import { FileUploadZone } from '../molecules/FileUploadZone';
 import { ChatInput } from '../molecules/ChatInput';
 import { AgentTimeline } from '../organisms/AgentTimeline';
 import { ArtifactFlow } from '../organisms/ArtifactFlow';
 import { useAgent } from '../../hooks/useAgent';
-import type { FileUploadResponse, Message } from '../../types';
+import type { FileUploadResponse, Message, AgentEvent } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../atoms/Card';
 
 export default function Dashboard() {
   const [file, setFile] = useState<FileUploadResponse | null>(null);
-  const { runAgent, isRunning, events } = useAgent();
+  const [allEvents, setAllEvents] = useState<AgentEvent[]>([]);
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+
+  const handleEvent = useCallback((event: AgentEvent) => {
+    setAllEvents(prev => [...prev, event]);
+  }, []);
+
+  const handleComplete = useCallback((message: string) => {
+    // Only capture the *clean* message content for history (stripping <think> tags if backend sent them in raw message, 
+    // but usually 'message' here is the final content string).
+    // The backend sends message.content.
+    const assistantMessage: Message = { role: 'assistant', content: message };
+    setChatMessages(prev => [...prev, assistantMessage]);
+  }, []);
+
+  const { runAgent, isRunning } = useAgent({
+    onEvent: handleEvent,
+    onComplete: handleComplete
+  });
 
   const handleFileUpload = (response: FileUploadResponse) => {
     setFile(response);
+    setAllEvents([]);
+    setChatMessages([]);
   };
 
   const handlePromptSubmit = (prompt: string) => {
     if (!file) return;
     
     const userMessage: Message = { role: 'user', content: prompt };
-    runAgent(file.uri, [userMessage]);
+    
+    // Optimistically update UI
+    const userEvent: AgentEvent = { status: 'user_message', message: prompt };
+    setAllEvents(prev => [...prev, userEvent]);
+    
+    // Update history for next context
+    const updatedMessages = [...chatMessages, userMessage];
+    setChatMessages(updatedMessages);
+    
+    runAgent(file.uri, updatedMessages);
   };
 
   return (
@@ -42,8 +71,8 @@ export default function Dashboard() {
       </header>
 
       <main className="flex-1 p-8 max-w-7xl mx-auto w-full grid grid-cols-12 gap-8">
-        {/* Left Column: Input and Progress */}
-        <div className="col-span-12 lg:col-span-5 flex flex-col space-y-8">
+        {/* Left Column: Lineage & Transformation Map (Secondary) */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col space-y-8 h-[800px] lg:h-auto">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -56,44 +85,54 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {file && (
-            <Card className="flex-1 flex flex-col">
-              <CardHeader className="border-b border-gray-100">
+          <Card className="flex-1 flex flex-col overflow-hidden">
+            <CardHeader className="border-b border-gray-100">
+              <CardTitle className="flex items-center space-x-2">
+                <Database className="h-5 w-5 text-primary-600" />
+                <span>Lineage Map</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 relative min-h-[400px]">
+                {file ? ( <ArtifactFlow events={allEvents} initialFileName={file.filename} /> ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 opacity-50 space-y-4">
+                    <Database className="h-12 w-12" />
+                    <p className="text-sm font-medium">Upload a dataset to see the flow</p>
+                  </div>
+                )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: AI Chat Interface (Primary) */}
+        <div className="col-span-12 lg:col-span-8 flex flex-col h-[800px]">
+          {file ? (
+            <Card className="flex-1 flex flex-col h-full shadow-lg border-primary-100">
+              <CardHeader className="border-b border-gray-100 bg-white sticky top-0 z-10">
                 <CardTitle className="flex items-center space-x-2">
                   <Sparkles className="h-5 w-5 text-primary-600" />
                   <span>AI Data Analyst</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col p-0">
-                <div className="flex-1 overflow-y-auto p-6 max-h-[500px]">
-                  <AgentTimeline events={events} />
+              <CardContent className="flex-1 flex flex-col p-0 relative h-full">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  <AgentTimeline events={allEvents} />
                 </div>
-                <div className="p-4 bg-gray-50 border-t border-gray-100 mt-auto">
+                <div className="p-4 bg-white border-t border-gray-100 sticky bottom-0">
                   <ChatInput onSend={handlePromptSubmit} disabled={isRunning} />
                 </div>
               </CardContent>
             </Card>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 space-y-6 bg-white rounded-xl border border-dashed border-gray-300">
+              <div className="p-4 bg-gray-50 rounded-full">
+                <Brain className="h-16 w-16 text-gray-300" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900">Ready to Analyze</h3>
+                <p className="text-gray-500 max-w-sm mt-2">Upload a dataset to start the AI analysis session.</p>
+              </div>
+            </div>
           )}
-        </div>
-
-        {/* Right Column: Visualization Map */}
-        <div className="col-span-12 lg:col-span-7 flex flex-col h-[700px] lg:h-auto">
-          <Card className="flex-1 flex flex-col overflow-hidden">
-            <CardHeader className="border-b border-gray-100">
-              <CardTitle className="flex items-center space-x-2">
-                <Database className="h-5 w-5 text-primary-600" />
-                <span>Lineage & Transformation Map</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 p-0 relative">
-                {file ? ( <ArtifactFlow events={events} initialFileName={file.filename} /> ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 opacity-50 space-y-4">
-                    <Database className="h-16 w-16" />
-                    <p className="text-lg font-medium">Upload a dataset to see the flow</p>
-                  </div>
-                )}
-            </CardContent>
-          </Card>
         </div>
       </main>
     </div>

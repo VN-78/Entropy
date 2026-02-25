@@ -6,7 +6,7 @@ export interface FileUploadResponse {
 }
 
 export interface AgentEvent {
-  status: 'info' | 'thinking' | 'executing' | 'success' | 'error' | 'complete';
+  status: 'info' | 'thinking' | 'executing' | 'success' | 'error' | 'complete' | 'user_message';
   message: string;
   tool?: string;
   args?: Record<string, any>;
