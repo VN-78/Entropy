@@ -7,7 +7,7 @@ import type { FileUploadResponse } from '../../types';
 import { cn } from '../../lib/utils';
 
 interface FileUploadZoneProps {
-  onUploadSuccess: (response: FileUploadResponse) => void;
+  onUploadSuccess: (response: FileUploadResponse, rawFile: File) => void;
   className?: string;
 }
 
@@ -35,7 +35,7 @@ export function FileUploadZone({ onUploadSuccess, className }: FileUploadZonePro
     setIsUploading(true);
     try {
       const result = await uploadFile(file);
-      onUploadSuccess(result);
+      onUploadSuccess(result, file);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {

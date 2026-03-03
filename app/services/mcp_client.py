@@ -20,8 +20,7 @@ class MCPClientManager:
 
     async def connect(self):
         """Connects to the MCP server via stdio."""
-        if self.session:
-            return
+        await self.disconnect()
 
         from contextlib import AsyncExitStack
         self._exit_stack = AsyncExitStack()
@@ -54,23 +53,31 @@ class MCPClientManager:
             
         except Exception as e:
             logger.error(f"Failed to connect to MCP Server: {e}")
-            if self._exit_stack:
-                await self._exit_stack.aclose()
+            await self.disconnect()
             raise
 
     async def disconnect(self):
         """Disconnects from the MCP server."""
         if self._exit_stack:
-            await self._exit_stack.aclose()
+            try:
+                await self._exit_stack.aclose()
+            except Exception as e:
+                logger.error(f"Error during disconnect: {e}")
+            self._exit_stack = None
             self.session = None
             logger.info("Disconnected from MCP Server.")
 
     async def list_tools(self) -> List[Dict[str, Any]]:
         """Lists available tools from the MCP server, mapped to OpenAI format."""
-        if not self.session:
+        try:
+            if not self.session:
+                await self.connect()
+            result = await self.session.list_tools()
+        except Exception as e:
+            logger.warning(f"Connection likely closed, reconnecting: {e}")
             await self.connect()
+            result = await self.session.list_tools()
             
-        result = await self.session.list_tools()
         tools = []
         for tool in result.tools:
             tools.append({
@@ -85,11 +92,15 @@ class MCPClientManager:
 
     async def call_tool(self, name: str, arguments: dict) -> Any:
         """Calls an MCP tool with the specified arguments."""
-        if not self.session:
+        try:
+            if not self.session:
+                await self.connect()
+            logger.info(f"Calling tool: {name} with args: {arguments}")
+            result = await self.session.call_tool(name, arguments=arguments)
+        except Exception as e:
+            logger.warning(f"Connection likely closed, reconnecting: {e}")
             await self.connect()
-            
-        logger.info(f"Calling tool: {name} with args: {arguments}")
-        result = await self.session.call_tool(name, arguments=arguments)
+            result = await self.session.call_tool(name, arguments=arguments)
         
         # Parse MCP CallToolResult (which contains a list of TextContent / etc.)
         outputs = []

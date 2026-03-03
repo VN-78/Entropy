@@ -159,6 +159,64 @@ def clean_dataset(file_uri: str, options: CleaningOptions) -> CleaningResponse:
     except Exception as e:
         raise RuntimeError(f"Cleaning Failed: {str(e)}")
 
+import json
+
+# region generate_visualization
+@mcp.tool()
+def generate_visualization(file_uri: str, chart_type: str, x_column: str, y_column: str = "") -> str:
+    """
+    Generates an interactive chart specification from a dataset for the frontend to render.
+    Call this tool when the user asks for a chart, plot, or graph.
+
+    Args:
+        file_uri: The absolute path to the input file (e.g., 's3://bucket/data.csv' or local path).
+        chart_type: MUST be one of: 'bar', 'line', 'scatter', 'pie'.
+        x_column: The column name to use for the X-axis (or labels for pie charts).
+        y_column: The column name to use for the Y-axis (or values for pie charts). Can be empty if counting.
+        
+    Returns:
+        A JSON string containing the chart configuration and data points (up to 100 rows).
+    """
+    try:
+        import numpy as np
+        
+        df = client.load_data(file_uri)
+        
+        # Drop NaNs in relevant columns to avoid JSON serialization errors
+        cols_to_keep = [x_column]
+        if y_column and y_column in df.columns:
+            cols_to_keep.append(y_column)
+            
+        df_subset = df[cols_to_keep].dropna().head(100)
+        
+        def safe_cast(val):
+            if isinstance(val, (np.integer, int)):
+                return int(val)
+            if isinstance(val, (np.floating, float)):
+                return float(val)
+            return str(val)
+
+        data = []
+        for _, row in df_subset.iterrows():
+            point = {x_column: safe_cast(row[x_column])}
+            if y_column and y_column in df.columns:
+                point[y_column] = safe_cast(row[y_column])
+            data.append(point)
+            
+        chart_spec = {
+            "type": "visualization",
+            "chart_type": chart_type,
+            "x_column": x_column,
+            "y_column": y_column,
+            "data": data
+        }
+        
+        return json.dumps(chart_spec)
+        
+    except Exception as e:
+        raise RuntimeError(f"Visualization Generation Failed: {str(e)}")
+
+
 # region main
 if __name__ == "__main__":
     mcp.run(transport="stdio")

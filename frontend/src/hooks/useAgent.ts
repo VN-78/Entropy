@@ -14,7 +14,9 @@ export function useAgent({ onEvent, onComplete, onError }: UseAgentProps = {}) {
 
   const runAgent = useCallback(async (fileUri: string, messages: Message[]) => {
     setIsRunning(true);
-    setEvents([]); // Reset events
+    // We intentionally do NOT reset events here so that past tool executions (like visualizations) 
+    // remain visible across multi-turn conversations.
+    // setEvents([]); 
 
     abortControllerRef.current = new AbortController();
 
@@ -53,10 +55,10 @@ export function useAgent({ onEvent, onComplete, onError }: UseAgentProps = {}) {
               if (onEvent) onEvent(event);
 
               if (event.status === 'complete') {
-                if (onComplete) onComplete(event.message);
+                if (onComplete) onComplete(event.message || '');
                 setIsRunning(false);
               } else if (event.status === 'error') {
-                if (onError) onError(event.message);
+                if (onError) onError(event.message || 'Unknown error');
                 setIsRunning(false);
               }
             } catch (err) {

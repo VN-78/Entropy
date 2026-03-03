@@ -71,6 +71,8 @@ export function AgentTimeline({ events }: AgentTimelineProps) {
   return (
     <div className="flex flex-col space-y-4">
       {events.map((event, index) => {
+        if (event.status === 'history_update') return null;
+
         // Special handling for user messages
         if (event.status === 'user_message') {
           return (
@@ -84,7 +86,7 @@ export function AgentTimeline({ events }: AgentTimelineProps) {
 
         // Special handling for completion events which might contain <think> blocks
         if (event.status === 'complete') {
-          const { thinkContent, cleanMessage } = parseMessage(event.message);
+          const { thinkContent, cleanMessage } = parseMessage(event.message || '');
           
           return (
             <div 
@@ -152,7 +154,7 @@ export function AgentTimeline({ events }: AgentTimelineProps) {
         );
       })}
       
-      {events.length === 0 && (
+      {events.filter(e => e.status !== 'history_update').length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-gray-400 opacity-50">
           <BrainCircuit className="h-12 w-12 mb-4" />
           <p>Agent is waiting for instructions...</p>

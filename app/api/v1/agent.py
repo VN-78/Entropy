@@ -34,16 +34,19 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
 
 
     except Exception as e:
+        import traceback
+        traceback_str = traceback.format_exc()
+        logger.error(f"Failed to connect to tools:\n{traceback_str}")
         yield f"data: {json.dumps({'status': 'error', 'message': f'Failed to connect to tools: {e}'})}\n\n"
 
 
         return
 
     # 2. Add System Prompt instructing the agent to use tools
-    system_prompt = f"You are an AI Data Analyst. You have access to tools to process data. The user has uploaded a file at URI: {request.file_uri}. Always start by inspecting the dataset using `inspect_dataset`."
+    system_prompt = f"You are an AI Data Analyst. You have access to tools to process data. The user has uploaded a file at URI: {request.file_uri}. Always start by inspecting the dataset using `inspect_dataset`. IMPORTANT: Once you have answered the user's query or generated the requested artifact/visualization, DO NOT call any more tools. Provide a final summary or explanation in plain text and stop."
     messages = [{"role": "system", "content": system_prompt}] + [m.model_dump() for m in request.messages]
 
-    max_iterations = 5
+    max_iterations = 15
     for i in range(max_iterations):
         yield f"data: {json.dumps({'status': 'thinking', 'message': 'Analyzing prompt and selecting tool...'})}\n\n"
 
@@ -83,7 +86,7 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
                     # Execute tool via MCP
                     tool_result = await data_refinery_mcp.call_tool(func_name, func_args)
                     
-                    yield f"data: {json.dumps({'status': 'success', 'message': f'Tool {func_name} completed.', 'result': tool_result})}\n\n"
+                    yield f"data: {json.dumps({'status': 'success', 'message': f'Tool {func_name} completed.', 'tool': func_name, 'result': tool_result})}\n\n"
 
                     
                     # Append tool result to history
@@ -94,7 +97,7 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
                     })
                 except Exception as e:
                     error_msg = f"Error running {func_name}: {e}"
-                    yield f"data: {json.dumps({'status': 'error', 'message': error_msg})}\n\n"
+                    yield f"data: {json.dumps({'status': 'error', 'message': error_msg, 'tool': func_name})}\n\n"
 
 
                     messages.append({
@@ -106,11 +109,18 @@ async def agent_loop(request: AgentRunRequest, llm_client: Any):
             # Agent replied with standard text (Final answer)
             yield f"data: {json.dumps({'status': 'complete', 'message': message.content})}\n\n"
 
+            # Yield the final message history so the frontend can maintain context
+            # We filter out the system prompt (which is always inserted dynamically)
+            history_to_keep = messages[1:]
+            yield f"data: {json.dumps({'status': 'history_update', 'messages': history_to_keep})}\n\n"
 
             break
             
     else:
          yield f"data: {json.dumps({'status': 'error', 'message': 'Reached maximum reasoning iterations.'})}\n\n"
+         history_to_keep = messages[1:]
+         yield f"data: {json.dumps({'status': 'history_update', 'messages': history_to_keep})}\n\n"
+
 
 
 
